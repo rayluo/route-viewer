@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!-- Derived from:
+* Mapbox GL example https://www.mapbox.com/help/getting-started-directions-api/#review-the-response
+* Mapbox js example https://www.mapbox.com/mapbox.js/example/v1.0.0/single-marker/
+* Mapbox js line example https://www.mapbox.com/help/extending-interactivity/#next-steps
+-->
+<html>
+<head>
+<meta charset=utf-8 />
+<title>A simple map</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
+<link href='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+</style>
+</head>
+<body>
+
+<div id='map'>Usage: http://...?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74</div>
+<script>
+function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback) {
+    var routeUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${start_lon}%2C${start_lat}%3B${end_lon}%2C${end_lat}.json?access_token=${access_token}&steps=true&geometries=geojson`;
+    jQuery.getJSON(routeUrl, function(data){
+        var properties = {
+            "stroke": "#fa946e",
+            "stroke-opacity": 1,
+            "stroke-width": 6
+        };
+        var geojson = {type: 'Feature', geometry: data.routes[0].geometry, properties: properties};
+        callback(geojson);
+    });
+}
+
+function showFeature(geojson) {
+    L.mapbox.featureLayer(geojson).addTo(map);
+}
+
+L.mapbox.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejh2N21nMzAxMmQzMnA5emRyN2lucW0ifQ.jSE-g2vsn48Ry928pqylcg'; // A sample key came from mapbox's own online example
+
+var qp = new URLSearchParams(window.location.search);
+if(qp.has("start_lat") && qp.has("start_lon") && qp.has("end_lat") && qp.has("end_lon")) {
+    var map = L.mapbox.map('map', 'mapbox.streets');
+    getRoute(
+        L.mapbox.accessToken, qp.get("start_lat"), qp.get("start_lon"),
+        qp.get("end_lat"), qp.get("end_lon"), showFeature);
+    map.setView([qp.get("start_lat"), qp.get("start_lon")], 14);
+}
+
+</script>
+
+</body>
+</html>
