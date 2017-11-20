@@ -12,6 +12,7 @@
 <script src='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
 <link href='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
 <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.6/papaparse.min.js"></script>
 <style>
   body { margin:0; padding:0; }
   #map { position:absolute; top:0; bottom:0; width:100%; }
@@ -20,7 +21,8 @@
 <body>
 
 <div id='map'>
-  <a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74">Example</a>
+  <li><a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74">Example with input in url</a></li>
+  <li><a href="?solution_url=solution.csv">Example with input in a csv file</a></li>
 </div>
 <script>
 function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback) {
@@ -52,6 +54,36 @@ if(qp.has("start_lat") && qp.has("start_lon") && qp.has("end_lat") && qp.has("en
   );
   map.setView([qp.get("start_lat"), qp.get("start_lon")], 14);
 }
+else if(qp.has("solution_url")) {
+  // Here we consume a csv file with headers as: veh_id, origin_lat, origin_lon,
+  // destination_lat, destination_lon, etc..
+  jQuery.get(qp.get("solution_url"), function(csv){
+    var solution = Papa.parse(csv, {header: true});
+    if(solution.errors) {  // Malformed CSV, such as the trailing empty line.
+      solution.errors.forEach(function(error){
+        console.log(error);
+      });
+    }
+    if(solution.data) {
+      var map = L.mapbox.map('map', 'mapbox.streets');
+      solution.data.forEach(function(leg){
+        if(leg.veh_id){  // This also filters out the final empty line
+          getRoute(
+            L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
+            leg.destination_lat, leg.destination_lon, function(geojson) {
+              L.mapbox.featureLayer(geojson).addTo(map);
+            }
+          );
+          map.setView([leg.origin_lat, leg.origin_lon], 14);
+        }
+      });
+    }
+  })
+  .fail(function( jqxhr, textStatus, error ) {
+    console.log( "Request Failed: " + textStatus + ", " + error );
+  });
+}
+else console.log("No param recognized");
 
 </script>
 
