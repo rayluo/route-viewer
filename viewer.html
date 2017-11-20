@@ -19,7 +19,9 @@
 </head>
 <body>
 
-<div id='map'>Usage: http://...?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74</div>
+<div id='map'>
+  <a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74">Example</a>
+</div>
 <script>
 function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback) {
     var routeUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${start_lon}%2C${start_lat}%3B${end_lon}%2C${end_lat}.json?access_token=${access_token}&steps=true&geometries=geojson`;
