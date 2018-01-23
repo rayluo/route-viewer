@@ -60,17 +60,28 @@ else if(qp.has("solution_url")) {
     }
     if(solution.data) {
       var map = L.mapbox.map('map', 'mapbox.streets');
+      var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
       solution.data.forEach(function(leg){
         if(leg.veh_id){  // This also filters out the final empty line
+          var color = StringToPredefinedColor.get(leg.veh_id);
           getRoute(
             L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
             leg.destination_lat, leg.destination_lon, function(geometry) {
-              var properties = {
-                "stroke": StringToPredefinedColor.get(leg.veh_id),
+              var route = {type: 'Feature', geometry: geometry, properties: {
+                "stroke": color,
                 "stroke-opacity": 1,
                 "stroke-width": 4
+              }};
+              var point = {
+                type: 'Feature',
+                geometry: {type: "Point", coordinates: [leg.origin_lon, leg.origin_lat]},
+                properties: {
+                  title: leg.origin,
+                  "marker-color": color,
+                  "marker-symbol": icons[leg.origin[0]] || "marker"
+                }
               };
-              var geojson = {type: 'Feature', geometry: geometry, properties: properties};
+              var geojson = {type: "FeatureCollection", features: [route, point]};
               L.mapbox.featureLayer(geojson).addTo(map);
             }
           );
