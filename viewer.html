@@ -49,7 +49,12 @@ if(qp.has("start_lat") && qp.has("start_lon") && qp.has("end_lat") && qp.has("en
   var map = L.mapbox.map('map', 'mapbox.streets');
   getRoute(
     L.mapbox.accessToken, qp.get("start_lat"), qp.get("start_lon"),
-    qp.get("end_lat"), qp.get("end_lon"), function(geojson) {
+    qp.get("end_lat"), qp.get("end_lon"), function(geometry) {
+      var geojson = {type: 'Feature', geometry: geometry, properties: {
+        "stroke": "#fa946e", // orange
+        "stroke-opacity": 1,
+        "stroke-width": 4
+      }};
       L.mapbox.featureLayer(geojson).addTo(map);
     }
   );
