@@ -13,6 +13,7 @@
 <link href='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
 <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.6/papaparse.min.js"></script>
+<script src="string2color.js"></script>
 <style>
   body { margin:0; padding:0; }
   #map { position:absolute; top:0; bottom:0; width:100%; }
@@ -22,24 +23,24 @@
 
 <div id='map'>
   <li><a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74">Example with input in url</a></li>
-  <li><a href="?solution_url=solution.csv">Example with input in a csv file</a></li>
+  <li>
+    <a href="?solution_url=solution.csv&description=From ${origin} to ${destination}">
+    Example with input in a csv file
+    </a>
+  </li>
 </div>
 <script>
 function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback) {
   var routeUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${start_lon}%2C${start_lat}%3B${end_lon}%2C${end_lat}.json?access_token=${access_token}&steps=true&geometries=geojson`;
-  jQuery.getJSON(routeUrl, function(data){
-    var properties = {
-      "stroke": "#fa946e",
-      "stroke-opacity": 1,
-      "stroke-width": 6
-    };
-    var geojson = {type: 'Feature', geometry: data.routes[0].geometry, properties: properties};
-    callback(geojson);
-  })
+  jQuery.getJSON(routeUrl, function(data){callback(data.routes[0].geometry)})
   .fail(function( jqxhr, textStatus, error ) {
     console.log( "Request Failed: " + textStatus + ", " + error );
   });
 }
+
+// Usage: interpolate("hello ${name}", {name: "world"})
+// Copied from https://stackoverflow.com/a/41118285/728675
+var interpolate = (tpl, args) => tpl.replace(/\${(\w+)}/g, (_, v) => args[v]);
 
 L.mapbox.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejh2N21nMzAxMmQzMnA5emRyN2lucW0ifQ.jSE-g2vsn48Ry928pqylcg'; // A sample key came from mapbox's own online example
 
@@ -66,11 +67,29 @@ else if(qp.has("solution_url")) {
     }
     if(solution.data) {
       var map = L.mapbox.map('map', 'mapbox.streets');
+      var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
       solution.data.forEach(function(leg){
         if(leg.veh_id){  // This also filters out the final empty line
+          var color = StringToPredefinedColor.get(leg.veh_id);
           getRoute(
             L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
-            leg.destination_lat, leg.destination_lon, function(geojson) {
+            leg.destination_lat, leg.destination_lon, function(geometry) {
+              var route = {type: 'Feature', geometry: geometry, properties: {
+                "stroke": color,
+                "stroke-opacity": 1,
+                "stroke-width": 4
+              }};
+              var point = {
+                type: 'Feature',
+                geometry: {type: "Point", coordinates: [leg.origin_lon, leg.origin_lat]},
+                properties: { // Derived from https://www.mapbox.com/help/markers-js/
+                  title: leg.origin,
+                  description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
+                  "marker-color": color,
+                  "marker-symbol": icons[leg.origin[0]] || "marker"
+                }
+              };
+              var geojson = {type: "FeatureCollection", features: [route, point]};
               L.mapbox.featureLayer(geojson).addTo(map);
             }
           );
