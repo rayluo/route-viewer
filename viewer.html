@@ -22,10 +22,15 @@
 <body>
 
 <div id='map'>
-  <li><a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74">Example with input in url</a></li>
+  <li><a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74&stroke_width=6">Example with input in url</a></li>
   <li>
-    <a href="?solution_url=solution.csv&description=From ${origin} to ${destination}">
-    Example with input in a csv file
+    <a href="?solution_url=solution.csv&stroke_width=6&description=From ${origin} to ${destination}">
+    Example with input in a csv file, show zigzag route
+    </a>
+  </li>
+  <li>
+    <a href="?solution_url=solution.csv&real_route=true&stroke_width=6&description=From ${origin} to ${destination}">
+    Example with input in a csv file, show real route
     </a>
   </li>
 </div>
@@ -49,7 +54,12 @@ if(qp.has("start_lat") && qp.has("start_lon") && qp.has("end_lat") && qp.has("en
   var map = L.mapbox.map('map', 'mapbox.streets');
   getRoute(
     L.mapbox.accessToken, qp.get("start_lat"), qp.get("start_lon"),
-    qp.get("end_lat"), qp.get("end_lon"), function(geojson) {
+    qp.get("end_lat"), qp.get("end_lon"), function(geometry) {
+      var geojson = {type: 'Feature', geometry: geometry, properties: {
+        "stroke": "#fa946e", // orange
+        "stroke-opacity": 1,
+        "stroke-width": qp.get("stroke_width") || 6
+      }};
       L.mapbox.featureLayer(geojson).addTo(map);
     }
   );
@@ -71,28 +81,41 @@ else if(qp.has("solution_url")) {
       solution.data.forEach(function(leg){
         if(leg.veh_id){  // This also filters out the final empty line
           var color = StringToPredefinedColor.get(leg.veh_id);
-          getRoute(
-            L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
-            leg.destination_lat, leg.destination_lon, function(geometry) {
-              var route = {type: 'Feature', geometry: geometry, properties: {
-                "stroke": color,
-                "stroke-opacity": 1,
-                "stroke-width": 4
-              }};
-              var point = {
-                type: 'Feature',
-                geometry: {type: "Point", coordinates: [leg.origin_lon, leg.origin_lat]},
-                properties: { // Derived from https://www.mapbox.com/help/markers-js/
-                  title: leg.origin,
-                  description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
-                  "marker-color": color,
-                  "marker-symbol": icons[leg.origin[0]] || "marker"
-                }
-              };
-              var geojson = {type: "FeatureCollection", features: [route, point]};
-              L.mapbox.featureLayer(geojson).addTo(map);
+          var point = {
+            type: 'Feature',
+            geometry: {type: "Point", coordinates: [leg.origin_lon, leg.origin_lat]},
+            properties: { // Derived from https://www.mapbox.com/help/markers-js/
+              title: leg.origin,
+              description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
+              "marker-color": color,
+              "marker-symbol": icons[leg.origin[0]] || "marker"
             }
-          );
+          };
+          var route_properties = {
+            "stroke": color,
+            "stroke-opacity": 1,
+            "stroke-width": qp.get("stroke_width") || 6
+          };
+          var showOnMap = function(features) {
+            L.mapbox.featureLayer({type: "FeatureCollection", features: features}).addTo(map);
+          };
+
+          if(qp.has("real_route")) {
+            getRoute(
+              L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
+              leg.destination_lat, leg.destination_lon, function(geometry) {
+                var route = {type: 'Feature', geometry: geometry, properties: route_properties};
+                showOnMap([route, point]);
+              }
+            );
+          } else { // Show zigzag instead of real routes
+            var geometry = { // Derived from https://www.mapbox.com/mapbox.js/example/v1.0.0/cross-date-line/
+              type: "LineString",
+              coordinates: [[leg.origin_lon, leg.origin_lat], [leg.destination_lon, leg.destination_lat]]
+            };
+            var line = {type: 'Feature', geometry: geometry, properties: route_properties};
+            showOnMap([line, point]);
+          }
           map.setView([leg.origin_lat, leg.origin_lon], 14);
         }
       });
