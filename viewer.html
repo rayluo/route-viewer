@@ -21,19 +21,60 @@
 </head>
 <body>
 
-<div id='map'>
-  <li><a href="?start_lat=40.733&start_lon=-73.989&end_lat=40.733&end_lon=-74&stroke_width=6">Example with input in url</a></li>
-  <li>
-    <a href="?solution_url=solution.csv&stroke_width=6&description=From ${origin} to ${destination}">
-    Example with input in a csv file, show zigzag route
-    </a>
-  </li>
-  <li>
-    <a href="?solution_url=solution.csv&real_route=true&stroke_width=6&description=From ${origin} to ${destination}">
-    Example with input in a csv file, show real route
-    </a>
-  </li>
+<div id="usage">
+  <fieldset><legend>Example: Real Route from point A to point B</legend>
+    <form>
+      <div>
+        <label>A's latitude and longitude:</label>
+        <input name="start_lat" value="40.733"></input>
+        <input name="start_lon" value="-73.989"></input>
+      </div>
+      <div>
+        <label>B's latitude and longitude:</label>
+        <input name="end_lat" value="40.733"></input>
+        <input name="end_lon" value="-74"></input>
+      </div>
+      <div><label>Stroke Width</label><input name="stroke_width" value="6"></input></div>
+      <input type="submit"></input>
+    </form>
+  </fieldset>
+
+  <fieldset><legend>Example: Show routes based on a solution file in csv format</legend>
+    <form>
+      <div><label>solution url</label><input name="solution_url" value="solution.csv"></input></div>
+      <div><label>Stroke Width</label><input name="stroke_width" value="6"></input></div>
+      <div><label>Description Template for each marker</label>
+        <input name="description" value="From ${origin} to ${destionation}"></input>
+      </div>
+      <div><label>Column in csv to derive the color from</label>
+        <input name="color_field" value="veh_id"></input>
+      </div>
+      <div><label>Column in csv for origin name, will be shown in hovering balloon</label>
+        <input name="origin_name" value="origin"></input>
+      </div>
+      <div><label>Column in csv for origin latitude</label>
+        <input name="origin_lat" value="origin_lat"></input>
+      </div>
+      <div><label>Column in csv for origin longitude</label>
+        <input name="origin_lon" value="origin_lon"></input>
+      </div>
+      <div><label>Column in csv for destination latitude</label>
+        <input name="dest_lat" value="destination_lat"></input>
+      </div>
+      <div><label>Column in csv for destination longitude</label>
+        <input name="dest_lon" value="destination_lon"></input>
+      </div>
+      <input type="submit"></input>
+    </form>
+  </fieldset>
 </div>
+
+<div id='map'></div>
+
+<script>
+jQuery( (window.location.search) ? "#usage" : "#map" ).hide();
+</script>
+
 <script>
 function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback) {
   var routeUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${start_lon}%2C${start_lat}%3B${end_lon}%2C${end_lat}.json?access_token=${access_token}&steps=true&geometries=geojson`;
@@ -66,60 +107,13 @@ if(qp.has("start_lat") && qp.has("start_lon") && qp.has("end_lat") && qp.has("en
   map.setView([qp.get("start_lat"), qp.get("start_lon")], 14);
 }
 else if(qp.has("solution_url")) {
-  // Here we consume a csv file with headers as: veh_id, origin_lat, origin_lon,
-  // destination_lat, destination_lon, etc..
+  // Here we consume a csv file with configurable headers. See example form for details.
   jQuery.get(qp.get("solution_url"), function(csv){
     var solution = Papa.parse(csv, {header: true});
     if(solution.errors) {  // Malformed CSV, such as the trailing empty line.
-      solution.errors.forEach(function(error){
-        console.log(error);
-      });
+      solution.errors.forEach(console.log);
     }
-    if(solution.data) {
-      var map = L.mapbox.map('map', 'mapbox.streets');
-      var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
-      solution.data.forEach(function(leg){
-        if(leg.veh_id){  // This also filters out the final empty line
-          var color = StringToPredefinedColor.get(leg.veh_id);
-          var point = {
-            type: 'Feature',
-            geometry: {type: "Point", coordinates: [leg.origin_lon, leg.origin_lat]},
-            properties: { // Derived from https://www.mapbox.com/help/markers-js/
-              title: leg.origin,
-              description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
-              "marker-color": color,
-              "marker-symbol": icons[leg.origin[0]] || "marker"
-            }
-          };
-          var route_properties = {
-            "stroke": color,
-            "stroke-opacity": 1,
-            "stroke-width": qp.get("stroke_width") || 6
-          };
-          var showOnMap = function(features) {
-            L.mapbox.featureLayer({type: "FeatureCollection", features: features}).addTo(map);
-          };
-
-          if(qp.has("real_route")) {
-            getRoute(
-              L.mapbox.accessToken, leg.origin_lat, leg.origin_lon,
-              leg.destination_lat, leg.destination_lon, function(geometry) {
-                var route = {type: 'Feature', geometry: geometry, properties: route_properties};
-                showOnMap([route, point]);
-              }
-            );
-          } else { // Show zigzag instead of real routes
-            var geometry = { // Derived from https://www.mapbox.com/mapbox.js/example/v1.0.0/cross-date-line/
-              type: "LineString",
-              coordinates: [[leg.origin_lon, leg.origin_lat], [leg.destination_lon, leg.destination_lat]]
-            };
-            var line = {type: 'Feature', geometry: geometry, properties: route_properties};
-            showOnMap([line, point]);
-          }
-          map.setView([leg.origin_lat, leg.origin_lon], 14);
-        }
-      });
-    }
+    if(solution.data) {showSolution(solution.data, qp);}
   })
   .fail(function( jqxhr, textStatus, error ) {
     console.log( "Request Failed: " + textStatus + ", " + error );
@@ -127,6 +121,59 @@ else if(qp.has("solution_url")) {
 }
 else console.log("No param recognized");
 
+function showSolution(solutionData, qp) {
+  var map = L.mapbox.map('map', 'mapbox.streets');
+  var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
+  solutionData.forEach(function(leg){
+    console.log(leg);
+    var originName = leg[qp.get("origin_name")];
+    var originLat = leg[qp.get("origin_lat")];
+    var originLon = leg[qp.get("origin_lon")];
+    var destLat = leg[qp.get("dest_lat")];
+    var destLon = leg[qp.get("dest_lon")];
+    if(originLat){  // This also filters out the final empty line
+      var color = StringToPredefinedColor.get(leg[qp.get("color_field")]);
+      var point = {
+        type: "Feature",
+        geometry: {type: "Point", coordinates: [originLon, originLat]},
+        properties: { // Derived from https://www.mapbox.com/help/markers-js/
+          title: originName,
+          description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
+          "marker-color": color,
+          "marker-symbol": icons[originName[0]] || "marker"  // TODO: Make it customizable
+        }
+      };
+      if(destLat && destLon) {
+        showRoute(originLat, originLon, destLat, destLon, color, qp, map);
+      }
+      showFeatures([point], map);
+      map.setView([originLat, originLon], 14);
+    }
+  });
+}
+
+function showRoute(originLat, originLon, destLat, destLon, color, qp, map) {
+  var routeProperties = {
+    "stroke": color,
+    "stroke-opacity": 1,
+    "stroke-width": qp.get("stroke_width") || 6
+  };
+  if(qp.has("real_route")) {
+    getRoute(L.mapbox.accessToken, originLat, originLon, destLat, destLon, function(geometry) {
+      var route = {type: "Feature", geometry: geometry, properties: routeProperties};
+      showFeatures([route], map);
+    });
+  } else { // Show zigzag instead of real routes
+    // Derived from https://www.mapbox.com/mapbox.js/example/v1.0.0/cross-date-line/
+    var geometry = {type: "LineString", coordinates: [[originLon, originLat], [destLon, destLat]]};
+    var line = {type: "Feature", geometry: geometry, properties: routeProperties};
+    showFeatures([line], map);
+  }
+}
+
+function showFeatures(features, map) {
+  L.mapbox.featureLayer({type: "FeatureCollection", features: features}).addTo(map);
+}
 </script>
 
 </body>
