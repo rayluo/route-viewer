@@ -47,6 +47,9 @@
         <input name="route_type" type="radio" value="real"></input>Real
         <input name="route_type" type="radio" value="zigzag" checked></input>Zigzag
       </div>
+      <div><label>Zoom Level (1-14)</label>
+        <input name="zoom_level" value="12"></input>
+      </div>
       <div><label>Description Template for each marker</label>
         <input name="description" value="From ${origin} to ${destionation}"></input>
       </div>
@@ -151,7 +154,7 @@ function showSolution(solutionData, qp) {
         showRoute(originLat, originLon, destLat, destLon, color, qp, map);
       }
       showFeatures([point], map);
-      map.setView([originLat, originLon], 14);
+      map.setView([originLat, originLon], qp.get("zoom_level") || 13);
     }
   });
 }
