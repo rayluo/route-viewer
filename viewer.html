@@ -90,7 +90,7 @@ function getRoute(access_token, start_lat, start_lon, end_lat, end_lon, callback
 
 // Usage: interpolate("hello ${name}", {name: "world"})
 // Copied from https://stackoverflow.com/a/41118285/728675
-var interpolate = (tpl, args) => tpl.replace(/\${(\w+)}/g, (_, v) => args[v]);
+var interpolate = (tpl, args) => tpl.replace(/\${([\w\.]+)}/g, (_, v) => args[v]);
 
 L.mapbox.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejh2N21nMzAxMmQzMnA5emRyN2lucW0ifQ.jSE-g2vsn48Ry928pqylcg'; // A sample key came from mapbox's own online example
 
