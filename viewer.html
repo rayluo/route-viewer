@@ -43,6 +43,10 @@
     <form>
       <div><label>solution url</label><input name="solution_url" value="solution.csv"></input></div>
       <div><label>Stroke Width</label><input name="stroke_width" value="6"></input></div>
+      <div><label>Route Type</label>
+        <input name="route_type" type="radio" value="real"></input>Real
+        <input name="route_type" type="radio" value="zigzag" checked></input>Zigzag
+      </div>
       <div><label>Description Template for each marker</label>
         <input name="description" value="From ${origin} to ${destionation}"></input>
       </div>
@@ -58,10 +62,10 @@
       <div><label>Column in csv for origin longitude</label>
         <input name="origin_lon" value="origin_lon"></input>
       </div>
-      <div><label>Column in csv for destination latitude</label>
+      <div><label>Column in csv for destination latitude (optional)</label>
         <input name="dest_lat" value="destination_lat"></input>
       </div>
-      <div><label>Column in csv for destination longitude</label>
+      <div><label>Column in csv for destination longitude (optional)</label>
         <input name="dest_lon" value="destination_lon"></input>
       </div>
       <input type="submit"></input>
@@ -158,7 +162,7 @@ function showRoute(originLat, originLon, destLat, destLon, color, qp, map) {
     "stroke-opacity": 1,
     "stroke-width": qp.get("stroke_width") || 6
   };
-  if(qp.has("real_route")) {
+  if(qp.get("route_type") === "real") {
     getRoute(L.mapbox.accessToken, originLat, originLon, destLat, destLon, function(geometry) {
       var route = {type: "Feature", geometry: geometry, properties: routeProperties};
       showFeatures([route], map);
