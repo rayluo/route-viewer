@@ -71,6 +71,17 @@
       <div><label>Column in csv for destination longitude (optional)</label>
         <input name="destination_lon" value="destination_lon"></input>
       </div>
+      <div>
+        <label>Icons are defined in this column</label>
+        <input name="icons_column" value="origin_type"></input>
+        <label>Icon translation (
+          field values are defined
+          <a href="https://www.mapbox.com/maki-icons/" target="_blank">here</a>;
+          field names are also dynamic, see source code to understand how to use)
+        </label>
+        <input name="icon_depot" value="warehouse"></input>
+        <input name="icon_customer" value="embassy"></input>
+      </div>
       <input type="submit"></input>
     </form>
   </fieldset>
@@ -130,7 +141,7 @@ else console.log("No param recognized");
 
 function showSolution(solutionData, qp) {
   var map = L.mapbox.map('map', 'mapbox.streets');
-  var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
+  var iconDefinedInColumn = qp.get("icons_column");
   function getitem(obj, name) {
     var value = obj[name];
     if(value == null) {console.log(`Could not find "${name}" in data`);}
@@ -145,6 +156,7 @@ function showSolution(solutionData, qp) {
       // This also filters out the final empty line
       var color = StringToPredefinedColor.get(getitem(
         leg, qp.get("color_field") || "color_field"));
+      var iconType = getitem(leg, iconDefinedInColumn);
       var point = {
         type: "Feature",
         geometry: {type: "Point", coordinates: [originLon, originLat]},
@@ -152,7 +164,7 @@ function showSolution(solutionData, qp) {
           title: originName,
           description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
           "marker-color": color,
-          "marker-symbol": icons[originName[0]] || "marker"  // TODO: Make it customizable
+          "marker-symbol": qp.get(`icon_${iconType}`) || "marker" // Icon mapping
         }
       };
 
