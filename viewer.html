@@ -66,10 +66,10 @@
         <input name="origin_lon" value="origin_lon"></input>
       </div>
       <div><label>Column in csv for destination latitude (optional)</label>
-        <input name="dest_lat" value="destination_lat"></input>
+        <input name="destination_lat" value="destination_lat"></input>
       </div>
       <div><label>Column in csv for destination longitude (optional)</label>
-        <input name="dest_lon" value="destination_lon"></input>
+        <input name="destination_lon" value="destination_lon"></input>
       </div>
       <input type="submit"></input>
     </form>
@@ -131,15 +131,20 @@ else console.log("No param recognized");
 function showSolution(solutionData, qp) {
   var map = L.mapbox.map('map', 'mapbox.streets');
   var icons = {"D": "warehouse", "C": "embassy"}; // https://www.mapbox.com/maki-icons/
+  function getitem(obj, name) {
+    var value = obj[name];
+    if(value == null) {console.log(`Could not find "${name}" in data`);}
+    return value;
+  }
   solutionData.forEach(function(leg){
     console.log(leg);
-    var originName = leg[qp.get("origin_name")];
-    var originLat = leg[qp.get("origin_lat")];
-    var originLon = leg[qp.get("origin_lon")];
-    var destLat = leg[qp.get("dest_lat")];
-    var destLon = leg[qp.get("dest_lon")];
-    if(originLat){  // This also filters out the final empty line
-      var color = StringToPredefinedColor.get(leg[qp.get("color_field")]);
+    var originName = getitem(leg, qp.get("origin_name") || "origin_name");
+    var originLat = getitem(leg, qp.get("origin_lat") || "origin_lat");
+    var originLon = getitem(leg, qp.get("origin_lon") || "origin_lon");
+    if(originLat != null && originLon != null && originName != null) {
+      // This also filters out the final empty line
+      var color = StringToPredefinedColor.get(getitem(
+        leg, qp.get("color_field") || "color_field"));
       var point = {
         type: "Feature",
         geometry: {type: "Point", coordinates: [originLon, originLat]},
@@ -150,9 +155,14 @@ function showSolution(solutionData, qp) {
           "marker-symbol": icons[originName[0]] || "marker"  // TODO: Make it customizable
         }
       };
+
+      // This part is optional
+      var destLat = getitem(leg, qp.get("destination_lat") || "destination_lat");
+      var destLon = getitem(leg, qp.get("destination_lon") || "destination_lon");
       if(destLat && destLon) {
         showRoute(originLat, originLon, destLat, destLon, color, qp, map);
       }
+
       showFeatures([point], map);
       map.setView([originLat, originLon], qp.get("zoom_level") || 13);
     }
