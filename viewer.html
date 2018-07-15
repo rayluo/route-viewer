@@ -50,14 +50,14 @@
       <div><label>Zoom Level (1-14)</label>
         <input name="zoom_level" value="12"></input>
       </div>
+      <div><label>Hovering Title Template for each marker</label>
+        <input name="title" value="Waypoint ${origin}"></input>
+      </div>
       <div><label>Description Template for each marker</label>
         <input name="description" value="From ${origin} to ${destionation}"></input>
       </div>
       <div><label>Column in csv to derive the color from</label>
         <input name="color_field" value="veh_id"></input>
-      </div>
-      <div><label>Column in csv for origin name, will be shown in hovering balloon</label>
-        <input name="origin_name" value="origin"></input>
       </div>
       <div><label>Column in csv for origin latitude</label>
         <input name="origin_lat" value="origin_lat"></input>
@@ -149,10 +149,9 @@ function showSolution(solutionData, qp) {
   }
   solutionData.forEach(function(leg){
     console.log(leg);
-    var originName = getitem(leg, qp.get("origin_name") || "origin_name");
     var originLat = getitem(leg, qp.get("origin_lat") || "origin_lat");
     var originLon = getitem(leg, qp.get("origin_lon") || "origin_lon");
-    if(originLat != null && originLon != null && originName != null) {
+    if(originLat != null && originLon != null) {
       // This also filters out the final empty line
       var color = StringToPredefinedColor.get(getitem(
         leg, qp.get("color_field") || "color_field"));
@@ -161,7 +160,8 @@ function showSolution(solutionData, qp) {
         type: "Feature",
         geometry: {type: "Point", coordinates: [originLon, originLat]},
         properties: { // Derived from https://www.mapbox.com/help/markers-js/
-          title: originName,
+          title: qp.has("title") ? interpolate(qp.get("title"), leg)
+            : getitem(leg, "origin"), // This default value is backward compatible
           description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
           "marker-color": color,
           "marker-symbol": qp.get(`icon_${iconType}`) || "marker" // Icon mapping
