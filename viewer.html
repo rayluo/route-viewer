@@ -160,8 +160,7 @@ function showSolution(solutionData, qp) {
         type: "Feature",
         geometry: {type: "Point", coordinates: [originLon, originLat]},
         properties: { // Derived from https://www.mapbox.com/help/markers-js/
-          title: qp.has("title") ? interpolate(qp.get("title"), leg)
-            : getitem(leg, "origin"), // This default value is backward compatible
+          title: qp.has("title") ? interpolate(qp.get("title"), leg) : "",
           description: qp.has("description") ? interpolate(qp.get("description"), leg) : "",
           "marker-color": color,
           "marker-symbol": qp.get(`icon_${iconType}`) || "marker" // Icon mapping
