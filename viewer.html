@@ -151,7 +151,7 @@ function showSolution(solutionData, qp) {
     console.log(leg);
     var originLat = getitem(leg, qp.get("origin_lat") || "origin_lat");
     var originLon = getitem(leg, qp.get("origin_lon") || "origin_lon");
-    if(originLat != null && originLon != null) {
+    if(originLat && originLon && !isNaN(originLat) && !isNaN(originLon)) {
       // This also filters out the final empty line
       var color = StringToPredefinedColor.get(getitem(
         leg, qp.get("color_field") || "color_field"));
